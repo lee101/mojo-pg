@@ -1,0 +1,26 @@
+name: test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    env:
+      PGPASSWORD: ci
+      PGDATABASE: mojo_pg_test
+      PG_AUTH: "15433"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          cache: true
+      - name: postgres
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -qc "create role $(id -un) superuser login password 'ci'"
+          sudo -u postgres createdb -O "$(id -un)" mojo_pg_test
+          tests/auth_cluster.sh start
+      - run: ./build.sh
+      - run: USER=$(id -un) build/test_pg
+      - run: ./build.sh tests/dump.mojo
+      - run: psql -v ON_ERROR_STOP=1 -f bench/gen_data.sql && tests/parity.sh

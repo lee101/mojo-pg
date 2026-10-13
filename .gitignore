@@ -1,0 +1,6 @@
+build/
+scratch/
+.pixi/
+bench/go/gobench
+*.o
+*.log

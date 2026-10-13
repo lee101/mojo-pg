@@ -1,0 +1,3 @@
+[submodule "vendor/mojo-parity"]
+	url = https://github.com/lee101/mojo-parity.git
+	path = vendor/mojo-parity
