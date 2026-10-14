@@ -138,7 +138,7 @@ Float parameters are formatted like Go `strconv.FormatFloat(x, 'g', -1, 64)` (sh
   multi-host failover (first host is used), protocol 3.0 only.
 - SCRAM: no SASLprep (non-ASCII passwords must already be NFKC), no channel binding (-PLUS). No GSS/SSPI/Kerberos, no
   client certificates, no `.pgpass`, no service files.
-- `DateStyle` must stay ISO for the date/time decoders. No read timeout after connect: use `statement_timeout`.
+- `DateStyle` must stay ISO for the date/time decoders.
 - Thread-safety: `Conn` and `Pool` are not thread-safe. One `Conn` per thread, or guard a `Pool` with a lock;
   `Pool.acquire` raises when all conns are out (no waiting).
 - No binary-format decoders, arrays, composite types, ranges, intervals, uuid helpers (read them with `text()`).
