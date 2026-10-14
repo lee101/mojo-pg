@@ -14,6 +14,7 @@ struct Config(Copyable, Movable):
     var sslmode: String
     var connect_timeout_ms: Int
     var statement_timeout_ms: Int
+    var read_timeout_ms: Int
     var read_only: Bool
     var statement_cache: Bool
     var param_keys: List[String]
@@ -31,6 +32,7 @@ struct Config(Copyable, Movable):
         var ct = getenv("PGCONNECT_TIMEOUT", "")
         self.connect_timeout_ms = 10000 if ct.byte_length() == 0 else _atoi_or(ct, 10) * 1000
         self.statement_timeout_ms = 0
+        self.read_timeout_ms = 0
         self.read_only = False
         self.statement_cache = True
         self.param_keys = List[String]()
@@ -90,6 +92,8 @@ struct Config(Copyable, Movable):
             self.sslmode = val
         elif key == "connect_timeout":
             self.connect_timeout_ms = _atoi_or(val, 10) * 1000
+        elif key == "read_timeout":
+            self.read_timeout_ms = _atoi_or(val, 0)
         elif key == "statement_timeout":
             self.statement_timeout_ms = _atoi_or(val, 0)
         elif key == "read_only" or key == "default_transaction_read_only":

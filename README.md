@@ -100,13 +100,16 @@ until ROLLBACK).
   unknown DSN keys are sent as runtime params.
 - DSN keys: host hostaddr port user password dbname application_name fallback_application_name options sslmode
   connect_timeout (s), `read_only` (adds `-c default_transaction_read_only=on`), `statement_timeout` (ms, adds
-  `-c statement_timeout=`), `statement_cache`. `PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE PGAPPNAME PGOPTIONS
+  `-c statement_timeout=`), `read_timeout` (ms, client-side socket deadline: on expiry a CancelRequest is sent, the
+  connection is marked broken and `pg: read: i/o timeout` is raised), `statement_cache`. `PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE PGAPPNAME PGOPTIONS
   PGSSLMODE PGCONNECT_TIMEOUT` are defaults, as in libpq.
 - TLS: `sslmode=prefer|require` (no verification), `verify-ca|verify-full` (system trust store or `SSL_CERT_FILE`,
   plus hostname). TCP only.
 - Messages: ParameterStatus, BackendKeyData, ReadyForQuery, Error/NoticeResponse, NotificationResponse,
   NegotiateProtocolVersion, RowDescription, DataRow, CommandComplete, EmptyQueryResponse, ParameterDescription, NoData,
   PortalSuspended, CancelRequest.
+- Per-call deadline: `pool.query(sql, params, timeout_ms)` / `conn.set_read_timeout_ms(ms)` bound a request end to end
+  (statement_timeout alone does not cover network stalls or multi-query requests).
 - Statement cache: first use pipelines Parse+Describe+Bind+Execute+Sync, later uses Bind+Execute+Sync. Evicts on
   0A000/26000 (one retry when idle). Max 512 statements, then unnamed.
 - Types (text format): int2/4/8, float4/8, numeric (string or Float64), bool, text/varchar/char, date (incl. BC,

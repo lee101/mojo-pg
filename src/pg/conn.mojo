@@ -181,8 +181,13 @@ struct Conn(Movable):
         if cfg.sslmode != "disable" and cfg.sslmode != "allow" and not cfg.is_unix():
             c._ssl_request()
         c._startup()
-        c.sock.set_timeout_ms(0)
+        c.sock.set_timeout_ms(cfg.read_timeout_ms)
         return c^
+
+    def set_read_timeout_ms(mut self, ms: Int):
+        """Bounds every socket read/write from now on (0 = none). A timeout sends a CancelRequest, marks the
+        connection broken and raises "pg: read: i/o timeout"; use it as a per-request deadline."""
+        self.sock.set_timeout_ms(ms)
 
     def _ssl_request(mut self) raises:
         """TLS hook: SSLRequest then OpenSSL handshake (verify-full verifies the cert + host)."""
@@ -270,6 +275,10 @@ struct Conn(Movable):
                 continue
             self.broken = True
             if en == 11:
+                try:
+                    self.cancel()
+                except:
+                    pass
                 raise Error("pg: read: i/o timeout")
             raise Error("pg: read: " + strerror(en))
 

@@ -1,3 +1,4 @@
+from std.ffi import external_call
 from std.os import getenv
 from std.memory import bitcast
 from std.time import perf_counter_ns
@@ -572,6 +573,39 @@ def test_pool(mut t: T) raises:
     p.close()
 
 
+def test_deadline(mut t: T) raises:
+    var p = Pool.open(unix_dsn() + " read_timeout=0 application_name=mpg_deadline", 2)
+    var t0 = perf_counter_ns()
+    try:
+        _ = p.query("select pg_sleep(3)", Params(), 300)
+        t.check(False, "deadline should raise")
+    except err:
+        t.check(String(err).find("i/o timeout") >= 0, "deadline error text: " + String(err))
+    var ms = Int(perf_counter_ns() - t0) // 1000000
+    t.check(ms >= 250 and ms < 1500, "deadline elapsed " + String(ms) + " ms")
+    t.eqi(p.open_conns(), 0, "timed-out conn dropped from pool")
+    var running = 1
+    for _ in range(40):
+        running = Int(p.query("select count(*) from pg_stat_activity where application_name = 'mpg_deadline' and query like 'select pg_sleep%' and state = 'active'").int(0, 0))
+        if running == 0:
+            break
+        _ = external_call["usleep", Int32](UInt32(50000))
+    t.eqi(running, 0, "server query cancelled after client deadline")
+    t.eqi(p.query("select $1::int", Params("5"), 1000).int(0, 0), 5, "pool usable after deadline")
+    try:
+        _ = p.query("select 1", Params(), 0)
+        t.check(False, "expired deadline should raise")
+    except:
+        t.ok += 1
+    var c = Conn.connect(unix_dsn() + " read_timeout=200")
+    try:
+        _ = c.query("select pg_sleep(1)")
+        t.check(False, "dsn read_timeout should raise")
+    except err:
+        t.check(String(err).find("i/o timeout") >= 0 and c.broken, "dsn read_timeout")
+    p.close()
+
+
 def test_auth(mut t: T) raises:
     var host = getenv("PG_AUTH", "")
     if host.byte_length() == 0:
@@ -623,6 +657,7 @@ def main() raises:
     test_options(t)
     print("pool")
     test_pool(t)
+    test_deadline(t)
     print("auth")
     test_auth(t)
     print("ok", t.ok, "fail", t.fail)

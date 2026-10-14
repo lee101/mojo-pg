@@ -55,6 +55,21 @@ struct Pool(Movable):
             self.release(c^)
             raise e^
 
+    def query(mut self, sql: String, params: Params, timeout_ms: Int) raises -> Result:
+        """query with a read deadline of timeout_ms for this call (the conn returns to the pool's default after)."""
+        if timeout_ms <= 0:
+            raise Error("pg: read: i/o timeout")
+        var c = self.acquire()
+        c.set_read_timeout_ms(timeout_ms)
+        try:
+            var r = c.query(sql, params)
+            c.set_read_timeout_ms(self.cfg.read_timeout_ms)
+            self.release(c^)
+            return r^
+        except e:
+            self.release(c^)
+            raise e^
+
     def query(mut self, sql: String) raises -> Result:
         return self.query(sql, Params())
 
